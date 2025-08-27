@@ -1,0 +1,140 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  posts     Post[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      Role     @default(ADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts Post[] // <-- обратната връзка
+}
+
+model Post {
+  id         String     @id @default(cuid())
+  title      String
+  slug       String     @unique
+  content    String
+  seoTitle   String?
+  seoDesc    String?
+  image      String?
+  status     PostStatus @default(DRAFT)
+  authorId   String
+  author     User       @relation(fields: [authorId], references: [id])
+  categoryId String? // <-- временно optional
+  category   Category?  @relation(fields: [categoryId], references: [id]) // <-- също optional
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model FileAsset {
+  id        String   @id @default(cuid())
+  kind      String
+  path      String
+  width     Int?
+  height    Int?
+  mime      String?
+  sizeBytes Int?
+  createdAt DateTime @default(now())
+}
+
+model Track {
+  id           String       @id @default(cuid())
+  artist       String
+  title        String
+  artistNorm   String?
+  titleNorm    String?
+  slug         String       @unique
+  image        String?
+  duration     Int?
+  createdAt    DateTime     @default(now())
+  plays        Play[]
+  chartEntries ChartEntry[]
+
+  // back-ref към кеша (1:1)
+  nowPlaying NowPlayingCache? @relation("NowPlayingTrack")
+
+  @@unique([artist, title], name: "artist_title_unique")
+}
+
+model Play {
+  id       String   @id @default(cuid())
+  trackId  String
+  track    Track    @relation(fields: [trackId], references: [id])
+  playedAt DateTime @default(now())
+  source   String?
+  meta     Json?
+
+  // ново:
+  type         PlayType @default(MUSIC) // какъв е записът
+  ignored      Boolean  @default(false) // true => не влиза в чартовете
+  ignoreReason String?
+
+  @@index([playedAt])
+  @@index([type, ignored])
+}
+
+model ChartWeek {
+  id        String       @id @default(cuid())
+  year      Int
+  week      Int
+  from      DateTime
+  to        DateTime
+  createdAt DateTime     @default(now())
+  entries   ChartEntry[]
+
+  @@unique([year, week], name: "year_week")
+}
+
+model ChartEntry {
+  id      String    @id @default(cuid())
+  chartId String
+  chart   ChartWeek @relation(fields: [chartId], references: [id], onDelete: Cascade)
+  trackId String
+  track   Track     @relation(fields: [trackId], references: [id])
+  plays   Int
+  rank    Int
+  delta   Int?
+}
+
+model NowPlayingCache {
+  id        String    @id @default("singleton")
+  trackId   String?   @unique
+  track     Track?    @relation("NowPlayingTrack", fields: [trackId], references: [id])
+  startedAt DateTime?
+  updatedAt DateTime  @updatedAt
+}
+
+enum PlayType {
+  MUSIC
+  JINGLE
+  AD
+  ID
+  OTHER
+}

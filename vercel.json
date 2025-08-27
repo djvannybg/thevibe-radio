@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/charts/snapshot",
+      "schedule": "5 0 * * 1"
+    }
+  ]
+}
