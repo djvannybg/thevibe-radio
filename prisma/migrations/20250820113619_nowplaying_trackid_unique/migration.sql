@@ -5,12 +5,12 @@
 
 */
 -- AlterTable
-ALTER TABLE `play` ADD COLUMN `ignoreReason` VARCHAR(191) NULL,
+ALTER TABLE `Play` ADD COLUMN `ignoreReason` VARCHAR(191) NULL,
     ADD COLUMN `ignored` BOOLEAN NOT NULL DEFAULT false,
     ADD COLUMN `type` ENUM('MUSIC', 'JINGLE', 'AD', 'ID', 'OTHER') NOT NULL DEFAULT 'MUSIC';
 
 -- AlterTable
-ALTER TABLE `track` ADD COLUMN `artistNorm` VARCHAR(191) NULL,
+ALTER TABLE `Track` ADD COLUMN `artistNorm` VARCHAR(191) NULL,
     ADD COLUMN `titleNorm` VARCHAR(191) NULL;
 
 -- CreateIndex

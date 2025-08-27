@@ -1,22 +1,22 @@
 /*
   Warnings:
 
-  - The primary key for the `nowplayingcache` table will be changed. If it partially fails, the table could be left without primary key constraint.
-  - You are about to drop the column `artist` on the `nowplayingcache` table. All the data in the column will be lost.
-  - You are about to drop the column `fetchedAt` on the `nowplayingcache` table. All the data in the column will be lost.
-  - You are about to drop the column `listeners` on the `nowplayingcache` table. All the data in the column will be lost.
-  - You are about to drop the column `station` on the `nowplayingcache` table. All the data in the column will be lost.
-  - You are about to drop the column `title` on the `nowplayingcache` table. All the data in the column will be lost.
-  - You are about to alter the column `id` on the `nowplayingcache` table. The data in that column could be lost. The data in that column will be cast from `VarChar(191)` to `Int`.
+  - The primary key for the `NowPlayingCache` table will be changed. If it partially fails, the table could be left without primary key constraint.
+  - You are about to drop the column `Artist` on the `NowPlayingCache` table. All the data in the column will be lost.
+  - You are about to drop the column `fetchedAt` on the `NowPlayingCache` table. All the data in the column will be lost.
+  - You are about to drop the column `listeners` on the `NowPlayingCache` table. All the data in the column will be lost.
+  - You are about to drop the column `station` on the `NowPlayingCache` table. All the data in the column will be lost.
+  - You are about to drop the column `title` on the `NowPlayingCache` table. All the data in the column will be lost.
+  - You are about to alter the column `id` on the `NowPlayingCache` table. The data in that column could be lost. The data in that column will be cast from `VarChar(191)` to `Int`.
   - Added the required column `updatedAt` to the `NowPlayingCache` table without a default value. This is not possible if the table is not empty.
 
 */
 -- DropIndex
-DROP INDEX `NowPlayingCache_station_fetchedAt_idx` ON `nowplayingcache`;
+DROP INDEX `NowPlayingCache_station_fetchedAt_idx` ON `NowPlayingCache`;
 
 -- AlterTable
-ALTER TABLE `nowplayingcache` DROP PRIMARY KEY,
-    DROP COLUMN `artist`,
+ALTER TABLE `NowPlayingCache` DROP PRIMARY KEY,
+    DROP COLUMN `Artist`,
     DROP COLUMN `fetchedAt`,
     DROP COLUMN `listeners`,
     DROP COLUMN `station`,

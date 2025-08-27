@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE `post` ADD COLUMN `categoryId` VARCHAR(191) NULL;
+ALTER TABLE `Post` ADD COLUMN `categoryId` VARCHAR(191) NULL;
 
 -- CreateTable
 CREATE TABLE `Category` (

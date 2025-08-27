@@ -13,7 +13,7 @@
 
 */
 -- AlterTable
-ALTER TABLE `post` DROP COLUMN `contentMdx`,
+ALTER TABLE `Post` DROP COLUMN `contentMdx`,
     DROP COLUMN `coverPath`,
     DROP COLUMN `excerpt`,
     DROP COLUMN `ogImagePath`,

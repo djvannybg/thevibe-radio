@@ -5,6 +5,6 @@
 
 */
 -- AlterTable
-ALTER TABLE `nowplayingcache` DROP PRIMARY KEY,
+ALTER TABLE `Nowplayingcache` DROP PRIMARY KEY,
     MODIFY `id` VARCHAR(191) NOT NULL DEFAULT 'singleton',
     ADD PRIMARY KEY (`id`);
