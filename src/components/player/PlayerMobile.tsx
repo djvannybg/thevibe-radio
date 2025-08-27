@@ -3,9 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 
 const CANDIDATE_STREAMS = [
-  "https://stream.thevibe.tv:8000/live",
-  "https://stream.thevibe.tv:8000/radio1",
-  "https://stream.thevibe.tv:8000/radio.mp3",
+  "https://stream.thevibe.tv:8000/live"
 ]
 
 export default function PlayerMobile({ className = "" }: { className?: string }) {
