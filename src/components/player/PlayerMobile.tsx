@@ -7,9 +7,6 @@ const COL_PINK = "#ec4899"
 const COL_FUCHSIA = "#d946ef"
 const COL_INDIGO = "#6366f1"
 
-// 👇 Типов shim: гарантираме, че buffer е от тип ArrayBuffer (не само ArrayBufferLike)
-type ByteArray = Uint8Array & { buffer: ArrayBuffer }
-
 export default function PlayerMobile({ className = "" }: { className?: string }) {
   const audioRef = useRef<HTMLAudioElement>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -19,9 +16,10 @@ export default function PlayerMobile({ className = "" }: { className?: string })
   const ctxRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null)
-  const dataRef = useRef<ByteArray | null>(null) // 👈 използваме ByteArray
+  const dataRef = useRef<Uint8Array | null>(null)
 
   const [playing, setPlaying] = useState(false)
+  const [visualizerReady, setVisualizerReady] = useState(false) // 👈 ако не успеем -> fallback само аудио
   const [meta, setMeta] = useState<{ artist?: string; title?: string }>({})
 
   // meta polling
@@ -45,49 +43,78 @@ export default function PlayerMobile({ className = "" }: { className?: string })
     if (!el) return
     try {
       if (!playing) {
-        await ensureAudioGraph()
-        try { el.load() } catch {}
+        // 1) Опит за WebAudio/visualizer; ако падне → продължаваме само с аудио
+        await tryEnsureAudioGraph()
+
+        // 2) Опит за play() – винаги (дори при fail отгоре)
         await el.play()
         setPlaying(true)
-        startVisualizer()
+
+        // 3) Ако имаме готов visualizer → стартирай рисуването
+        if (visualizerReady) startVisualizer()
       } else {
         el.pause()
         setPlaying(false)
         stopVisualizer()
       }
     } catch (err) {
-      console.warn("Play failed:", err)
+      // Ако play() падне (рядко, но при строги политики) – тихо игнорирай
+      console.warn("Play failed (fallback to plain audio if possible):", err)
+      try {
+        // последен опит – без WebAudio, само <audio>
+        analyserRef.current?.disconnect()
+        sourceRef.current?.disconnect()
+        await audioRef.current.play()
+        setPlaying(true)
+      } catch (e) {
+        console.warn("Plain audio play failed:", e)
+      }
     }
   }
 
-  async function ensureAudioGraph() {
+  async function tryEnsureAudioGraph() {
     const audio = audioRef.current
     if (!audio) return
-    audio.volume = 1 // няма volume UI на мобилно
+    audio.volume = 1
 
-    if (!ctxRef.current) {
-      const Ctx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext
+    if (ctxRef.current) {
+      setVisualizerReady(Boolean(analyserRef.current))
+      // вече имаме контекст; няма какво повече да правим
+      return
+    }
+
+    try {
+      const Ctx =
+        (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext
       const ctx = new Ctx()
       try { await ctx.resume() } catch {}
+
       const analyser = ctx.createAnalyser()
       analyser.fftSize = 256
       analyser.smoothingTimeConstant = 0.8
 
+      // ⚠️ Тук често хвърча грешки при CORS → ловим и правим fallback
       const src = ctx.createMediaElementSource(audio)
 
-      // Само за визуализация: src -> analyser (без destination, за да няма дублиран звук)
+      // Връзка: източник → анализатор → destination (иначе няма звук на мобилно)
       src.connect(analyser)
+      analyser.connect(ctx.destination)
 
       ctxRef.current = ctx
       analyserRef.current = analyser
       sourceRef.current = src
+      dataRef.current = new Uint8Array(analyser.frequencyBinCount)
 
-      // 👇 създаваме масива и го „заковаваме“ като ByteArray (buffer е реален ArrayBuffer)
-      dataRef.current = new Uint8Array(analyser.frequencyBinCount) as ByteArray
+      setVisualizerReady(true)
+    } catch (e) {
+      console.warn("WebAudio/Analyser not available, will use plain audio:", e)
+      // Без visualizer, но ще си пуснем чисто аудио
+      setVisualizerReady(false)
     }
   }
 
   function startVisualizer() {
+    if (!visualizerReady) return
     const cvs = canvasRef.current
     if (!cvs) return
 
@@ -113,10 +140,13 @@ export default function PlayerMobile({ className = "" }: { className?: string })
 
       let values: number[] = []
       if (analyserRef.current && dataRef.current) {
-        // 👇 TS shim: подай тип, който очаква lib.dom (ArrayBuffer, не ArrayBufferLike)
-        analyserRef.current.getByteFrequencyData(
-          (dataRef.current as unknown) as Uint8Array<ArrayBuffer>
+        // ✅ TS-safe view към същия buffer (ArrayBuffer, не ArrayBufferLike)
+        const view = new Uint8Array(
+          dataRef.current.buffer as ArrayBuffer,
+          dataRef.current.byteOffset,
+          dataRef.current.byteLength
         )
+        analyserRef.current.getByteFrequencyData(view)
         const arr = Array.from(dataRef.current.slice(2, 2 + BARS))
         values = arr.map(v => v / 255)
       }
@@ -151,7 +181,7 @@ export default function PlayerMobile({ className = "" }: { className?: string })
       if (document.hidden) {
         cancelAnimationFrame(rafRef.current || 0)
         rafRef.current = null
-      } else if (playing) {
+      } else if (playing && visualizerReady) {
         cancelAnimationFrame(rafRef.current || 0)
         rafRef.current = requestAnimationFrame(draw)
       }
@@ -210,7 +240,10 @@ export default function PlayerMobile({ className = "" }: { className?: string })
         role="button"
         aria-label={playing ? "Pause" : "Play"}
       >
-        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+        {/* показваме canvas само ако visualizer е готов */}
+        {visualizerReady && (
+          <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+        )}
 
         <button
           onClick={toggle}
@@ -233,6 +266,7 @@ export default function PlayerMobile({ className = "" }: { className?: string })
         preload="none"
         crossOrigin="anonymous"
         playsInline
+        // controls   // 👈 включи за тест, ако искаш
       />
       <style jsx>{`
         div[role="button"] { -webkit-tap-highlight-color: transparent; }

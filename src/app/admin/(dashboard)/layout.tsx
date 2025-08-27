@@ -17,7 +17,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         <div className="mb-6 font-bold">TheVibeTV</div>
         <nav className="space-y-2">
           <Link href="/admin" className="block rounded px-3 py-2 hover:bg-gray-50">
-            Начало
+            Dashboard
           </Link>
 
           <div>
